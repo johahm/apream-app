@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Compras - Recicladores</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        body {
+            background: linear-gradient(rgba(208, 243, 206, 0.9), rgba(88, 177, 5, 0.9));
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            position: relative;
+        }
+        
+
+        h2 {
+        text-align: center;
+        font-weight: bold;
+        }
+
+        h4 {  
+        font-weight: 600;
+        }
+
+        .card {
+        border-radius: 20px;
+        }
+          
+        @media (max-width: 600px) {
+
+           body {
+           padding: 10px;
+           }
+
+           h2 {
+           font-size: 22px;
+           }
+
+           h4 { 
+           font-size: 16px;
+           }
+
+           button {
+           font-size: 16px;
+           padding: 10px;
+           }
+           
+           .logo {
+               width: 45px;
+           }
+
+           .card {
+           padding: 10px !important;
+           }
+
+           table {
+           font-size: 12px;
+           }
+
+           select, input {
+           font-size: 16px;
+           padding: 10px;
+           }
+
+        }
+    
+        td {
+        word-break: break-word;
+        }     
+
+
+    button {
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* Agregar material */
+.btn-success {
+    background: linear-gradient(135deg, #4caf50, #2e7d32);
+}
+
+/* Finalizar compra */
+.btn-warning {
+    background: linear-gradient(135deg, #66bb6a, #388e3c);
+    color: white;
+}
+
+/* Historial */
+.btn-secondary {
+    background: linear-gradient(135deg, #546e7a, #37474f);
+}
+
+/* PDF */
+.btn-primary {
+    background: linear-gradient(135deg, #455a64, #263238);
+}
+
+/* Reiniciar */
+.btn-danger {
+    background: linear-gradient(135deg, #ef5350, #c62828);
+}
+
+/* Hover general */
+button:hover {
+    transform: scale(1.02);
+    opacity: 0.95;
+}
+        
+     .header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.logo {
+    position: absolute;
+    left: 0;
+    width: 60px;
+    top: 40px;
+}
+
+.header h2 {
+    margin: 0;
+    font-weight: bold;
+}
+
+#lagartijaAnim {
+    position: fixed;
+    bottom: 140px; /* zona del botón */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 220px; /* 🔥 tamaño grande */
+    max-width: 80%; /* evita que se salga en pantallas pequeñas */
+    opacity: 0;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+#lagartijaAnim.activa {
+    opacity: 1;
+}
+
+
+@media (max-width: 600px) {
+    #lagartijaAnim {
+        width: 260px; /* 🔥 más grande en móvil */
+        bottom: 120px;
+    }
+}
+
+</style>
+
+</head>
+
+<body class="container mt-4">
+
+
+<div class="header">
+    <img src="{{ url_for('static', filename='logo.png') }}" class="logo">
+    <h2> Asociación de Recicladores y Prestadores de Servicio Ambiental "APREAM 2" </h2>
+</div>
+
+
+<hr>
+<h4>Total de compras del día: $<span id="totalDia">0</span></h4>
+
+<hr>
+
+<h2 class="mb-4">Registrar Compra</h2>
+
+<div class="card p-3 mb-3 shadow">
+
+    <label>Material</label>
+    <select id="material" class="form-control mb-2"></select>
+
+    <label>Cantidad</label>
+    <input type="number" id="cantidad" class="form-control mb-3" placeholder="Ingrese cantidad">
+
+    <div id="manualBox" style="display:none;">
+        <label>Descripción (revuelto)</label>
+        <input type="text" id="descripcion" class="form-control mb-2">
+
+        <label>Precio manual</label>
+        <input type="number" id="precioManual" class="form-control mb-3">
+    </div>
+
+    <button class="btn btn-success w-100" onclick="calcular()">
+        ➕ Agregar material
+    </button>
+
+</div>
+
+<div class="card p-3 shadow">
+    <h4>Total de esta compra: $<span id="total">0</span></h4>
+
+    <button id="btnNuevaCompra" class="btn btn-warning w-100 mt-2" onclick="nuevaCompra()" style="display:none;">
+        ✅ Finalizar compra
+    </button>
+
+    <button class="btn btn-secondary w-100 mt-2" onclick="toggleHistorial()">
+        📋 Ver historial del día
+    </button>
+
+   <div id="boxHistorial" style="display:none;">
+    <h4 class="mt-3">📋 Historial del día</h4>
+    <table class="table table-bordered mt-2">
+       <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Detalle</th>
+                <th>Total Compra</th>
+            </tr>
+        </thead>
+        <tbody id="historial"></tbody>
+    </table>
+   </div>
+
+    <button class="btn btn-primary mt-3 w-100" onclick="descargarPDF()">
+       📄 Descargar PDF
+    </button>
+
+    <button class="btn btn-danger mt-3 w-100" onclick="reiniciar()">
+       🗑 Reiniciar día
+    </button>
+</div>
+
+<script>
+
+const materiales = [
+  { nombre: "aceite", precio: 100, unidad: "kg" },
+  { nombre: "aluminio", precio: 5000, unidad: "kg" },
+  { nombre: "archivo", precio: 500, unidad: "kg" },
+  { nombre: "bronce", precio: 16000, unidad: "kg" },
+  { nombre: "carton", precio: 400, unidad: "kg" },
+  { nombre: "chatarra", precio: 500, unidad: "kg" },
+  { nombre: "cobre limpio", precio: 30000, unidad: "kg" },
+  { nombre: "cobre quemado", precio: 29000, unidad: "kg" },
+  { nombre: "cubetas de huevos", precio: 50, unidad: "unidad" },
+  { nombre: "malta", precio: 100, unidad: "kg" },
+  { nombre: "pasta", precio: 900, unidad: "kg" },
+  { nombre: "pet", precio: 800, unidad: "kg" },
+  { nombre: "plancha", precio: 1300, unidad: "kg" },
+  { nombre: "pvc", precio: 300, unidad: "kg" },
+  { nombre: "revuelto", precio: 0, unidad: "kg" },
+  { nombre: "vidrio botella", precio: 50, unidad: "kg" }
+];
+
+let totalDia = 0;
+let historial = [];
+let compraActual = [];
+
+// Cargar datos
+let totalGuardado = localStorage.getItem("totalDia");
+if (totalGuardado) {
+    totalDia = parseFloat(totalGuardado);
+    document.getElementById("totalDia").innerText = formatoMoneda(totalDia);
+}
+
+let historialGuardado = localStorage.getItem("historial");
+if (historialGuardado) {
+    historial = JSON.parse(historialGuardado);
+    mostrarHistorial();
+}
+
+// SELECT
+const select = document.getElementById("material");
+
+materiales.forEach(m => {
+    let option = document.createElement("option");
+    option.value = m.precio;
+    option.text = `${m.nombre} (${m.unidad})`;
+    select.appendChild(option);
+});
+
+// REVUELTO
+select.addEventListener("change", function() {
+    let texto = this.options[this.selectedIndex].text;
+
+    document.getElementById("manualBox").style.display =
+        texto.includes("revuelto") ? "block" : "none";
+});
+
+// CALCULAR (AHORA AGREGA A LA COMPRA)
+function calcular() {
+
+    let texto = select.options[select.selectedIndex].text;
+    let precio = parseFloat(select.value);
+
+    // 🔥 ARREGLO AQUÍ (acepta coma o punto)
+    let cantidad = parseFloat(document.getElementById("cantidad").value.replace(",", "."));
+
+    let total = 0;
+
+    if (texto.includes("revuelto")) {
+
+        // 🔥 ARREGLO AQUÍ TAMBIÉN
+        let precioManual = parseFloat(document.getElementById("precioManual").value.replace(",", "."));
+
+        if (!precioManual || precioManual <= 0) {
+            alert("Ingrese un precio manual válido");
+            return;
+        }
+
+        if (!cantidad || cantidad <= 0) {
+            alert("Ingrese una cantidad válida");
+            return;
+        }
+
+        total = precioManual * cantidad;
+
+    } else {
+
+        if (!cantidad || cantidad <= 0) {
+            alert("Ingrese una cantidad válida");
+            return;
+        }
+
+        total = precio * cantidad;
+    }
+
+    // agregar a compra actual (NO SE TOCA)
+    compraActual.push({
+        material: texto,
+        cantidad: cantidad || "-",
+        total: total
+    });
+
+    // calcular acumulado (NO SE TOCA)
+    let totalCompra = compraActual.reduce((sum, item) => sum + item.total, 0);
+    document.getElementById("total").innerText = formatoMoneda(totalCompra);
+
+    // limpiar inputs (NO SE TOCA)
+    document.getElementById("cantidad").value = "";
+    document.getElementById("precioManual").value = "";
+    document.getElementById("descripcion").value = "";
+
+    // mostrar botón (NO SE TOCA)
+    document.getElementById("btnNuevaCompra").style.display = "block";
+}
+
+function formatoMoneda(valor) {
+    return Number(valor).toLocaleString("es-CO");
+}
+
+// FINALIZAR COMPRA
+function nuevaCompra() {
+
+    if (compraActual.length === 0) return;
+
+    let totalCompra = compraActual.reduce((sum, item) => sum + item.total, 0);
+
+    totalDia += totalCompra;
+    document.getElementById("totalDia").innerText = formatoMoneda(totalDia);
+
+    localStorage.setItem("totalDia", totalDia);
+
+    let detalle = compraActual.map(item =>
+        `${item.material} - ${item.cantidad} → $${item.total}`
+    ).join(" | ");
+
+    historial.push(detalle + ` = $${totalCompra}`);
+    localStorage.setItem("historial", JSON.stringify(historial));
+
+    mostrarHistorial();
+
+    // reset
+    compraActual = [];
+    document.getElementById("total").innerText = 0;
+    document.getElementById("btnNuevaCompra").style.display = "none";
+
+    mostrarLagartija();
+}
+
+// HISTORIAL
+function mostrarHistorial() {
+
+    let tabla = document.getElementById("historial");
+    tabla.innerHTML = "";
+
+    historial.forEach((item, index) => {
+
+        let fila = document.createElement("tr");
+
+        let partes = item.split("=");
+        let detalle = partes[0];
+        let total = partes[1] ? partes[1].replace("$", "").trim() : "0";
+
+        // 🔥 FORMATEAR TODOS LOS $ DEL DETALLE
+        let detalleFormateado = detalle.replace(/\$(\d+)/g, (match, num) => {
+            return "$" + formatoMoneda(num);
+        });
+
+        fila.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${detalleFormateado}</td>
+            <td>$${formatoMoneda(total)}</td>
+        `;
+
+        tabla.appendChild(fila);
+    });
+}
+
+// REINICIAR
+function reiniciar() {
+    if (!confirm("⚠️ ATENCIÓN:\n\nAntes de reiniciar debes descargar el PDF.\n\nSi continúas perderás TODA la información.\n\n¿Deseas continuar?")) return;
+
+    totalDia = 0;
+    historial = [];
+
+    document.getElementById("total").innerText = 0;
+    document.getElementById("totalDia").innerText = 0;
+
+    localStorage.clear();
+    mostrarHistorial();
+}
+
+// PDF
+function descargarPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    let fecha = new Date();
+    let d = String(fecha.getDate()).padStart(2, '0');
+    let m = String(fecha.getMonth() + 1).padStart(2, '0');
+    let a = String(fecha.getFullYear()).slice(-2);
+
+    let y = 10;
+
+    // 🧾 TÍTULO
+    doc.setFontSize(12);
+    doc.text(`Compras del día ${d}/${m}/${a}`, 10, y);
+
+    y += 10;
+
+    // 📋 ENCABEZADO TABLA
+    doc.setFontSize(9);
+    doc.setDrawColor(0, 0, 0);
+
+    doc.rect(10, y, 10, 8);
+    doc.rect(20, y, 120, 8);
+    doc.rect(140, y, 50, 8);
+
+    doc.text("#", 13, y + 5);
+    doc.text("Detalle", 22, y + 5);
+    doc.text("Total Compra", 145, y + 5);
+
+    y += 8;
+
+    // 📊 FILAS
+    historial.forEach((item, index) => {
+
+        let partes = item.split("=");
+        let detalle = partes[0];
+        let total = partes[1] ? partes[1].replace("$", "").trim() : "0";
+
+        // 🔥 LIMPIAR TEXTO (CLAVE)
+        let detalleLimpio = detalle
+            .replace(/→/g, "-")
+            .replace(/\|/g, "\n");
+
+        // 🔥 FORMATEAR PRECIOS
+        let detalleFormateado = detalleLimpio.replace(/\$(\d{1,3}(?:\d{3})*)/g, (match, num) => {
+            return "$" + formatoMoneda(num.replace(/\./g, ""));
+        });
+
+        // 🔥 DIVIDIR TEXTO EN LÍNEAS
+        let lineasDetalle = doc.splitTextToSize(detalleFormateado, 110);
+
+        // 🔥 ALTURA DINÁMICA
+        let altura = lineasDetalle.length * 5;
+
+        // 🔥 SALTO DE PÁGINA CORRECTO
+        if (y + altura > 270) {
+            doc.addPage();
+            y = 10;
+        }
+
+        // 🔲 DIBUJAR CELDAS
+        doc.rect(10, y, 10, altura);
+        doc.rect(20, y, 120, altura);
+        doc.rect(140, y, 50, altura);
+
+        // 📝 CONTENIDO
+        doc.text(String(index + 1), 13, y + 4);
+        doc.text(lineasDetalle, 22, y + 4);
+        doc.text(`$${formatoMoneda(total)}`, 145, y + 4);
+
+        y += altura;
+    });
+
+    y += 5;
+
+    // 💰 TOTAL FINAL
+    doc.setFontSize(11);
+    doc.text(`Total del día: $${formatoMoneda(totalDia)}`, 10, y);
+
+    doc.save(`compras_${d}-${m}-${a}.pdf`);
+}
+
+function toggleHistorial() {
+    let box = document.getElementById("boxHistorial");
+
+    if (box.style.display === "none") {
+        box.style.display = "block";
+    } else {
+        box.style.display = "none";
+    }
+}
+
+function mostrarLagartija() {
+    let lagartija = document.getElementById("lagartijaAnim");
+
+    // mostrar
+    lagartija.classList.add("activa");
+
+    // ocultar después de 3 segundos
+    setTimeout(() => {
+        lagartija.classList.remove("activa");
+    }, 3000);
+}
+
+</script>
+
+<img id="lagartijaAnim" src="{{ url_for('static', filename='lagarti.gif') }}">
+
+
+</body>
+</html>
